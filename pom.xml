@@ -19,6 +19,7 @@
         <!-- Library versions -->
         <slf4j.version>2.0.13</slf4j.version>
         <javassist.version>3.29.2-GA</javassist.version>
+        <!-- <jarkarta.servlet.version>6.1.0</jarkarta.servlet.version> -->
     </properties>
 
     <dependencies>
@@ -38,6 +39,12 @@
             <artifactId>javassist</artifactId>
             <version>${javassist.version}</version>
         </dependency>
+        <!-- <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>${jarkarta.servlet.version}</version>
+            <scope>provided</scope>
+        </dependency> -->
     </dependencies>
 
     <build>

