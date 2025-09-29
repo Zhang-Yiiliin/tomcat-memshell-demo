@@ -32,7 +32,7 @@ $ mvn clean package -DskipTests
 
 Attach agent.jar to tomcat 
 ```bash
-$ java --add-modules jdk.attach Attach "$(jcmd | grep -E 'catalina' | awk '{print $1}')" ~/workspace/tomcat-memshell-agent/target/agent.jar
+$ java --add-modules jdk.attach Attach "$(jcmd | grep -E 'catalina' | awk '{print $1}')" <Path-to-Project>/target/agent.jar
 ```
 
 ## Note
